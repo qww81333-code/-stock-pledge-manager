@@ -1,0 +1,748 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="theme-color" content="#0b1220" />
+  <meta name="apple-mobile-web-app-capable" content="yes" />
+  <meta name="apple-mobile-web-app-status-bar-style" content="black" />
+  <meta name="apple-mobile-web-app-title" content="質押管理器" />
+  <link rel="manifest" href="./manifest.webmanifest" />
+  <link rel="apple-touch-icon" href="./icon-180.png" />
+  <title>股票質押管理器 V3.1 PWA</title>
+  <style>
+    :root{
+      --bg:#08111f; --panel:#0e1a2b; --panel2:#132238; --line:#263852;
+      --text:#edf4ff; --muted:#91a3bd; --good:#3ddc97; --warn:#ffc857;
+      --bad:#ff6b6b; --accent:#69a7ff; --shadow:0 14px 35px rgba(0,0,0,.25);
+    }
+    *{box-sizing:border-box}
+    html{background:var(--bg)}
+    body{
+      margin:0; background:linear-gradient(180deg,#07101c 0%,#0a1423 45%,#08111f 100%);
+      color:var(--text); font-family:-apple-system,BlinkMacSystemFont,"SF Pro Text","PingFang TC",
+      "Noto Sans TC","Segoe UI",sans-serif; min-height:100vh;
+    }
+    .app{max-width:760px;margin:0 auto;padding:calc(18px + env(safe-area-inset-top)) 14px calc(32px + env(safe-area-inset-bottom))}
+    .topbar{
+      display:flex;gap:10px;align-items:center;justify-content:space-between;
+      margin-bottom:14px;position:sticky;top:0;z-index:50;
+      background:rgba(8,17,31,.96);backdrop-filter:blur(14px);-webkit-backdrop-filter:blur(14px);
+      padding:10px 0 12px;border-bottom:1px solid rgba(38,56,82,.55)
+    }
+    h1{font-size:22px;margin:0;letter-spacing:.2px}
+    .sub{font-size:12px;color:var(--muted);margin-top:4px}
+    button{
+      appearance:none;border:0;border-radius:12px;padding:11px 14px;font-weight:700;
+      color:var(--text);background:#203451;cursor:pointer;font-size:14px;
+    }
+    button:active{transform:scale(.985)}
+    .btn-accent{background:#1f67d2}
+    .btn-danger{background:#3b2028;color:#ffb8b8}
+    .btn-ghost{background:#142338;border:1px solid var(--line)}
+    .small{padding:10px 12px;font-size:13px;border-radius:10px;min-height:42px}
+    .card{
+      background:rgba(14,26,43,.94);border:1px solid var(--line);border-radius:18px;
+      padding:15px;margin:12px 0;box-shadow:var(--shadow)
+    }
+    .card h2{font-size:17px;margin:0 0 12px}
+    .dashboard{
+      display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px
+    }
+    .metric{
+      background:#101e31;border:1px solid #223650;border-radius:14px;padding:12px;min-height:86px;
+      display:flex;flex-direction:column;justify-content:space-between
+    }
+    .metric .label{font-size:12px;color:var(--muted)}
+    .metric .value{font-size:21px;font-weight:800;letter-spacing:.2px;word-break:break-word}
+    .metric .hint{font-size:11px;color:var(--muted);margin-top:4px}
+    .metric.wide{grid-column:span 2}
+    .status-good{border-color:rgba(61,220,151,.6);background:rgba(20,67,55,.45)}
+    .status-warn{border-color:rgba(255,200,87,.65);background:rgba(73,57,20,.45)}
+    .status-bad{border-color:rgba(255,107,107,.7);background:rgba(74,30,37,.5)}
+    .notice{
+      margin-top:10px;padding:11px 12px;border-radius:12px;border:1px solid var(--line);
+      background:#0d1929;color:var(--muted);font-size:12px;line-height:1.55
+    }
+    .notice.bad{border-color:rgba(255,107,107,.65);color:#ffd0d0;background:rgba(72,29,35,.5)}
+    .notice.warn{border-color:rgba(255,200,87,.55);color:#ffe7a3;background:rgba(76,59,18,.5)}
+    .row{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+    .row3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+    label{display:block;font-size:12px;color:var(--muted);margin:3px 0 6px}
+    input,select{
+      width:100%;border:1px solid #2b405e;background:#0a1727;color:var(--text);
+      border-radius:11px;padding:11px 10px;font-size:16px;outline:none;
+    }
+    input:focus,select:focus{border-color:#5f9cf2;box-shadow:0 0 0 3px rgba(95,156,242,.14)}
+    input[readonly]{color:#c5d4e8;background:#101b2b}
+    .suffix{position:relative}.suffix span{position:absolute;right:10px;top:36px;color:var(--muted);font-size:12px}
+    details{border-top:1px solid var(--line);margin-top:12px;padding-top:4px}
+    summary{cursor:pointer;color:#cfe0f7;font-weight:700;padding:10px 0;list-style:none}
+    summary::-webkit-details-marker{display:none}
+    summary::after{content:"＋";float:right;color:var(--muted)}
+    details[open] summary::after{content:"－"}
+    .asset{
+      border:1px solid #2a3c56;border-radius:15px;background:#0c1828;padding:12px;margin:10px 0
+    }
+    .asset-head{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .asset-title{min-width:0}
+    .asset-title b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .asset-title span{font-size:12px;color:var(--muted)}
+    .asset-value{text-align:right;font-size:12px;color:var(--muted);white-space:nowrap}
+    .asset-value b{display:block;color:var(--text);font-size:15px}
+    .asset-actions{display:flex;gap:7px;margin-top:10px}
+    .asset-body{display:none;margin-top:11px;border-top:1px solid #21334d;padding-top:10px}
+    .asset.open .asset-body{display:block}
+    .toggle-row{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .switch{position:relative;width:52px;height:30px;flex:0 0 auto}
+    .switch input{display:none}
+    .slider{position:absolute;inset:0;background:#233650;border-radius:999px;transition:.2s}
+    .slider:before{content:"";position:absolute;width:24px;height:24px;left:3px;top:3px;background:white;border-radius:50%;transition:.2s}
+    .switch input:checked + .slider{background:#1f67d2}
+    .switch input:checked + .slider:before{transform:translateX(22px)}
+    .pillbar{display:grid;grid-template-columns:repeat(3,1fr);gap:7px}
+    .pillbar button{padding:10px 6px}
+    .kpi-list{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin-top:10px}
+    .mini{background:#0a1727;border:1px solid #243955;border-radius:12px;padding:10px}
+    .mini span{display:block;font-size:11px;color:var(--muted)}
+    .mini b{display:block;font-size:16px;margin-top:4px}
+    .sep{height:1px;background:var(--line);margin:13px 0}
+    .footer{font-size:11px;color:#7f93ae;line-height:1.6;padding:4px 2px 20px}
+    .goodtxt{color:var(--good)!important}.warntxt{color:var(--warn)!important}.badtxt{color:var(--bad)!important}
+    .inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .grow{flex:1}
+    .toast{
+      position:fixed;left:50%;bottom:calc(22px + env(safe-area-inset-bottom));transform:translateX(-50%);
+      background:#eaf2ff;color:#0b1727;padding:10px 14px;border-radius:12px;font-size:13px;font-weight:700;
+      opacity:0;pointer-events:none;transition:.25s;z-index:20;box-shadow:0 8px 25px rgba(0,0,0,.3)
+    }
+    .toast.show{opacity:1}
+
+    .quote-input{display:flex;gap:7px;align-items:center}
+    .quote-input input{flex:1;min-width:0}
+    .quote-input button{flex:0 0 auto;white-space:nowrap}
+    .quote-meta{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.45}
+    .quote-meta.ok{color:#9ae8c3}
+    .quote-meta.warn{color:#ffe09a}
+    .quote-meta.bad{color:#ffadad}
+    .install-tip{border-color:#315b92;background:rgba(26,64,110,.28)}
+    .loading{opacity:.68;pointer-events:none}
+
+    @media (min-width:620px){.dashboard{grid-template-columns:repeat(3,1fr)}.metric.wide{grid-column:span 1}.pillbar{grid-template-columns:repeat(6,1fr)}}
+    @media (max-width:420px){.row3{grid-template-columns:1fr}.metric .value{font-size:19px}.topbar{align-items:flex-start}.topbar button{padding:9px 10px}}
+  </style>
+</head>
+<body>
+<div class="app">
+  <div class="topbar">
+    <div>
+      <h1>股票質押管理器 V3.1</h1>
+      <div class="sub">PWA・即時計算・股票代碼自動查價</div>
+    </div>
+    <button class="btn-ghost small" id="resetBtn">恢復預設值</button>
+  </div>
+
+  <section class="card" id="dashboardCard">
+    <h2>總覽儀表板</h2>
+    <div class="dashboard">
+      <div class="metric"><div class="label">總擔保品市值</div><div class="value" id="mMarket">—</div><div class="hint" id="mAssets">—</div></div>
+      <div class="metric" id="loanRatioMetric"><div class="label">總借款金額</div><div class="value" id="mLoan">—</div><div class="hint" id="mLoanRatio">—</div></div>
+      <div class="metric"><div class="label">整體維持率</div><div class="value" id="mMaint">—</div><div class="hint">簡化：擔保市值 ÷ 借款</div></div>
+      <div class="metric"><div class="label">20%法則最高借款</div><div class="value" id="m20Cap">—</div><div class="hint">你的個人風控上限</div></div>
+      <div class="metric"><div class="label">距20%上限</div><div class="value" id="m20Room">—</div><div class="hint" id="m20RoomHint">—</div></div>
+      <div class="metric"><div class="label">券商核定額度</div><div class="value" id="mBrokerCap">未填</div><div class="hint">手動輸入，與20%法則分開</div></div>
+    </div>
+    <div class="notice" id="riskNotice"></div>
+  </section>
+
+  <section class="card">
+    <div class="toggle-row">
+      <div><h2 style="margin-bottom:4px">20%風控模式</h2><div class="sub">開啟後，超過個人上限會醒目提醒，但不阻止試算</div></div>
+      <label class="switch"><input type="checkbox" id="riskToggle"><span class="slider"></span></label>
+    </div>
+    <div class="inline" style="margin-top:12px">
+      <button class="btn-accent grow" id="strict20Btn">嚴格20%：自動調整借款</button>
+    </div>
+  </section>
+
+  <section class="card">
+    <div class="inline" style="justify-content:space-between">
+      <h2 style="margin:0">質押標的管理</h2>
+      <div class="inline">
+        <button class="small btn-ghost" id="updateAllQuotesBtn">↻ 更新全部股價</button>
+        <button class="small btn-accent" id="addAssetBtn">＋ 加入質押標的</button>
+      </div>
+    </div>
+    <div class="notice install-tip" style="margin-bottom:10px">
+      輸入台股代碼（例如 0050、2330、006208）後，系統會自動查詢；也可按「查股價」手動更新。股價欄仍可自行修改。
+    </div>
+    <div id="assets"></div>
+  </section>
+
+  <section class="card">
+    <h2>借款設定</h2>
+    <div class="row">
+      <div><label>實際借款金額（元）</label><input id="loanAmount" type="number" min="0" step="1000" inputmode="decimal"></div>
+      <div><label>券商核定額度（元，可留空）</label><input id="brokerCap" type="number" min="0" step="1000" inputmode="decimal" placeholder="例如 500000"></div>
+      <div><label>年利率（%）</label><input id="annualRate" type="number" min="0" step="0.01" inputmode="decimal"></div>
+      <div><label>借款月數</label><input id="months" type="number" min="1" step="1" inputmode="numeric"></div>
+      <div><label>實際拿去買股票（元）</label><input id="investAmount" type="number" min="0" step="1000" inputmode="decimal"></div>
+      <div><label>保留現金（元）</label><input id="cashReserve" type="number" min="0" step="1000" inputmode="decimal"></div>
+      <div><label>預估期間配息（總額，元）</label><input id="dividend" type="number" step="100" inputmode="decimal"></div>
+      <div><label>借款日期</label><input id="borrowDate" type="date"></div>
+    </div>
+    <div class="notice" id="allocationNotice"></div>
+    <details>
+      <summary>到期管理</summary>
+      <div class="kpi-list">
+        <div class="mini"><span>到期日期</span><b id="maturityDate">—</b></div>
+        <div class="mini"><span>剩餘天數</span><b id="daysLeft">—</b></div>
+        <div class="mini"><span>預估到期總利息</span><b id="maturityInterest">—</b></div>
+        <div class="mini"><span>到期還本金＋利息</span><b id="repayTotal">—</b></div>
+        <div class="mini"><span>若展延同期間：新增利息</span><b id="renewInterest">—</b></div>
+        <div class="mini"><span>展延後本金</span><b id="renewPrincipal">—</b></div>
+      </div>
+      <div class="notice warn">展延不是自動或保證核准；額度、利率、期限、擔保品資格與維持率條件，請以永豐當下審核及實際契約為準。</div>
+    </details>
+  </section>
+
+  <section class="card">
+    <h2>借款成本</h2>
+    <div class="kpi-list">
+      <div class="mini"><span>期間總利息</span><b id="totalInterest">—</b></div>
+      <div class="mini"><span>平均每月利息</span><b id="monthlyInterest">—</b></div>
+      <div class="mini"><span>只算利息損平報酬率</span><b id="interestBE">—</b></div>
+      <div class="mini"><span>含交易成本損平報酬率</span><b id="costBE">—</b></div>
+    </div>
+    <div class="notice">利息用「借款本金 × 年利率 × 月數 ÷ 12」做試算；實際計息日數、最低利息或其他費用仍以券商帳務為準。</div>
+  </section>
+
+  <section class="card">
+    <h2>交易成本進階設定</h2>
+    <div class="row3">
+      <div><label>買進手續費率（%）</label><input id="buyFeeRate" type="number" min="0" step="0.0001" inputmode="decimal"></div>
+      <div><label>賣出手續費率（%）</label><input id="sellFeeRate" type="number" min="0" step="0.0001" inputmode="decimal"></div>
+      <div><label>ETF證交稅（%）</label><input id="taxRate" type="number" min="0" step="0.0001" inputmode="decimal"></div>
+    </div>
+    <div class="notice">預設買／賣手續費各 0.1425%、股票型 ETF 賣出證交稅 0.1%。實際手續費可因券商折扣、最低手續費與標的種類不同而異，因此全部可自行修改。</div>
+  </section>
+
+  <section class="card">
+    <h2>投資損益試算</h2>
+    <div class="row">
+      <div><label>輸入方式</label>
+        <select id="investmentMode"><option value="sell">輸入預計賣出價格</option><option value="return">輸入預期報酬率</option></select>
+      </div>
+      <div><label>買進價格（元）</label><input id="buyPrice" type="number" min="0" step="0.01" inputmode="decimal"></div>
+      <div id="sellPriceWrap"><label>預計賣出價格（元）</label><input id="sellPrice" type="number" min="0" step="0.01" inputmode="decimal"></div>
+      <div id="expectedReturnWrap"><label>預期報酬率（%）</label><input id="expectedReturn" type="number" step="0.1" inputmode="decimal"></div>
+    </div>
+    <div class="kpi-list">
+      <div class="mini"><span>投資價差損益</span><b id="pricePL">—</b></div>
+      <div class="mini"><span>預估配息</span><b id="dividendPL">—</b></div>
+      <div class="mini"><span>借款利息</span><b id="interestPL">—</b></div>
+      <div class="mini"><span>買＋賣手續費</span><b id="feesPL">—</b></div>
+      <div class="mini"><span>證交稅</span><b id="taxPL">—</b></div>
+      <div class="mini"><span>最後淨損益</span><b id="netPL">—</b></div>
+      <div class="mini"><span>淨報酬率</span><b id="netReturn">—</b></div>
+      <div class="mini"><span>含配息最低損平賣價</span><b id="breakEvenPrice">—</b></div>
+    </div>
+    <div class="notice" id="investmentNote"></div>
+  </section>
+
+  <section class="card">
+    <h2>維持率壓力測試</h2>
+    <div class="pillbar" id="stressButtons">
+      <button data-stress="-10">-10%</button><button data-stress="-20">-20%</button><button data-stress="-30">-30%</button>
+      <button data-stress="-40">-40%</button><button data-stress="-50">-50%</button><button data-stress="-60">-60%</button>
+    </div>
+    <div class="kpi-list">
+      <div class="mini"><span>壓力測試後總市值</span><b id="stressMarket">—</b></div>
+      <div class="mini"><span>壓力後維持率</span><b id="stressMaint">—</b></div>
+      <div class="mini"><span>距 166%</span><b id="dist166">—</b></div>
+      <div class="mini"><span>距 130%</span><b id="dist130">—</b></div>
+      <div class="mini"><span>到 166% 所需整體跌幅</span><b id="drop166">—</b></div>
+      <div class="mini"><span>到 130% 所需整體跌幅</span><b id="drop130">—</b></div>
+    </div>
+    <details open>
+      <summary>各標的自訂跌幅</summary>
+      <div id="stressAssets"></div>
+    </details>
+    <details>
+      <summary>166%／130% 對應價格或跌幅</summary>
+      <div class="kpi-list">
+        <div class="mini"><span id="label166">166% 對應</span><b id="target166">—</b></div>
+        <div class="mini"><span id="label130">130% 對應</span><b id="target130">—</b></div>
+      </div>
+      <div class="notice warn">166% 是你指定保留的參考線；不限用途質借的實際追繳／補繳與處分規則，不要直接等同一般融資規則。請以永豐實際契約與當下規定為準。</div>
+    </details>
+  </section>
+
+
+  <section class="card" id="settingsCard">
+    <h2>App 設定</h2>
+    <div class="notice">如果上方按鈕不好點，可以從這裡恢復預設值。</div>
+    <div class="inline" style="margin-top:12px">
+      <button class="btn-danger grow" id="resetBtnBottom">恢復預設值</button>
+    </div>
+  </section>
+
+  <div class="footer">
+    本工具僅供試算與風險管理，不代表保證獲利、保證安全或券商正式報價。行情功能需連線，且資料可能受交易時段、來源延遲或暫停交易影響；畫面會顯示最近一次取得的行情時間。若 ChatGPT / iPhone 內建預覽禁止瀏覽器儲存，新增、刪除與試算仍可使用，但關閉頁面後資料可能不會保留。維持率採「擔保品市值 ÷ 借款本金」的簡化估算，實務可能涉及可融資成數、擔保品折算、利息、集中度、停牌／處置股與其他契約條款。<br>
+    交易成本預設值：台股／ETF常見手續費 0.1425%（實際由券商訂定）；股票型 ETF 賣出證交稅 0.1%。若試算一般股票，請自行把證交稅改成適用稅率。
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+(() => {
+  const KEY = 'pledge-manager-v2';
+  const $ = id => document.getElementById(id);
+  const n = v => Number(v) || 0;
+  const money = v => Number.isFinite(v) ? new Intl.NumberFormat('zh-TW',{style:'currency',currency:'TWD',maximumFractionDigits:0}).format(v) : '—';
+  const num = (v,d=2) => Number.isFinite(v) ? new Intl.NumberFormat('zh-TW',{maximumFractionDigits:d,minimumFractionDigits:d}).format(v) : '—';
+  const pct = (v,d=2) => Number.isFinite(v) ? `${num(v,d)}%` : '—';
+  const todayLocal = () => {
+    const d=new Date(), y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,'0'), day=String(d.getDate()).padStart(2,'0');
+    return `${y}-${m}-${day}`;
+  };
+  const uid = () => Math.random().toString(36).slice(2,9);
+  const defaultState = () => ({
+    assets:[{id:uid(),code:'0050',name:'元大台灣50',price:112.45,lots:13,stress:-30,open:false}],
+    loanAmount:300000, brokerCap:'', annualRate:4, months:6, investAmount:300000, cashReserve:0, dividend:0,
+    borrowDate:todayLocal(), riskMode:true,
+    buyFeeRate:0.1425, sellFeeRate:0.1425, taxRate:0.1,
+    investmentMode:'sell', buyPrice:112.45, sellPrice:120, expectedReturn:6.7141
+  });
+  let state;
+  try { state = JSON.parse(localStorage.getItem(KEY)) || defaultState(); } catch(e){ state = defaultState(); }
+  if(!Array.isArray(state.assets)) state.assets = defaultState().assets;
+
+  let storageEnabled = true;
+  function save(){
+    try{
+      localStorage.setItem(KEY,JSON.stringify(state));
+      storageEnabled = true;
+    }catch(e){
+      storageEnabled = false;
+      // 某些 iPhone / ChatGPT 內建預覽會封鎖 localStorage。
+      // 不讓儲存失敗中斷新增、刪除、計算、壓力測試等功能。
+    }
+  }
+  function toast(msg){ const t=$('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),1600); }
+  function addMonths(dateStr, months){
+    if(!dateStr) return null;
+    const [y,m,d]=dateStr.split('-').map(Number);
+    const base=new Date(y,m-1,d);
+    const targetMonth=base.getMonth()+Number(months||0);
+    const temp=new Date(base.getFullYear(),targetMonth,1);
+    const lastDay=new Date(temp.getFullYear(),temp.getMonth()+1,0).getDate();
+    return new Date(temp.getFullYear(),temp.getMonth(),Math.min(d,lastDay));
+  }
+  function fmtDate(d){
+    if(!(d instanceof Date) || isNaN(d)) return '—';
+    return `${d.getFullYear()}/${String(d.getMonth()+1).padStart(2,'0')}/${String(d.getDate()).padStart(2,'0')}`;
+  }
+  function daysBetween(a,b){ return Math.ceil((b-a)/(1000*60*60*24)); }
+
+  function syncFields(){
+    $('loanAmount').value=state.loanAmount;
+    $('brokerCap').value=state.brokerCap ?? '';
+    $('annualRate').value=state.annualRate;
+    $('months').value=state.months;
+    $('investAmount').value=state.investAmount;
+    $('cashReserve').value=state.cashReserve;
+    $('dividend').value=state.dividend;
+    $('borrowDate').value=state.borrowDate || todayLocal();
+    $('riskToggle').checked=!!state.riskMode;
+    $('buyFeeRate').value=state.buyFeeRate;
+    $('sellFeeRate').value=state.sellFeeRate;
+    $('taxRate').value=state.taxRate;
+    $('investmentMode').value=state.investmentMode || 'sell';
+    $('buyPrice').value=state.buyPrice;
+    $('sellPrice').value=state.sellPrice;
+    $('expectedReturn').value=state.expectedReturn;
+  }
+
+
+  const quoteTimers = {};
+  function quoteReadyCode(v){
+    const code=String(v||'').trim().toUpperCase();
+    return /^[0-9A-Z]{4,7}$/.test(code) ? code : '';
+  }
+
+  async function getQuote(code){
+    if(location.protocol!=='https:' && location.protocol!=='http:'){
+      throw new Error('請先部署成 PWA 網址後再查即時行情');
+    }
+    const c=quoteReadyCode(code);
+    if(!c) throw new Error('請輸入正確股票代碼');
+    const res=await fetch(`/api/quote?code=${encodeURIComponent(c)}`,{
+      method:'GET', cache:'no-store', headers:{'Accept':'application/json'}
+    });
+    let data={};
+    try{ data=await res.json(); }catch(e){}
+    if(!res.ok || !data.ok) throw new Error(data.error || '行情查詢失敗');
+    return data;
+  }
+
+  async function refreshAssetQuote(asset, el, silent=false){
+    const code=quoteReadyCode(asset.code);
+    if(!code){
+      if(!silent) toast('請先輸入股票代碼');
+      return false;
+    }
+    const btn=el?.querySelector('.quoteAsset');
+    const meta=el?.querySelector('[data-quote-meta]');
+    if(btn){btn.textContent='查詢中…';btn.disabled=true;}
+    if(meta){meta.className='quote-meta warn';meta.textContent='正在取得最新行情…';}
+    try{
+      const q=await getQuote(code);
+      asset.code=q.code || code;
+      if(q.name) asset.name=q.name;
+      if(Number.isFinite(Number(q.price))) asset.price=Number(q.price);
+      asset.quoteAt=q.displayTime || q.time || q.date || '剛剛更新';
+      asset.quoteSource=q.sourceLabel || q.source || '行情來源';
+      asset.quoteError='';
+      save();
+      renderAll(false);
+      if(!silent) toast(`${asset.code} 已更新：${num(n(asset.price),2)} 元`);
+      return true;
+    }catch(err){
+      asset.quoteError=err?.message || '行情查詢失敗';
+      save();
+      if(meta){meta.className='quote-meta bad';meta.textContent=asset.quoteError;}
+      if(btn){btn.textContent='重試';btn.disabled=false;}
+      if(!silent) toast(asset.quoteError);
+      return false;
+    }
+  }
+
+  function renderAssets(){
+    const box=$('assets'); box.innerHTML='';
+    state.assets.forEach((a,i)=>{
+      const shares=n(a.lots)*1000, value=n(a.price)*shares;
+      const el=document.createElement('div'); el.className='asset'+(a.open?' open':''); el.dataset.id=a.id;
+      el.innerHTML=`
+        <div class="asset-head">
+          <div class="asset-title"><b>${escapeHtml(a.name||'未命名標的')}</b><span>${escapeHtml(a.code||'—')} ・ ${num(n(a.lots),0)} 張</span></div>
+          <div class="asset-value"><b>${money(value)}</b><span>${num(shares,0)} 股</span></div>
+        </div>
+        <div class="asset-actions">
+          <button class="small btn-ghost toggleAsset">${a.open?'收合':'展開'}</button>
+          <button class="small btn-danger deleteAsset">刪除</button>
+        </div>
+        <div class="asset-body">
+          <div class="row">
+            <div>
+              <label>股票代號</label>
+              <div class="quote-input">
+                <input data-k="code" value="${escapeAttr(a.code||'')}" placeholder="0050" autocapitalize="characters">
+                <button class="small btn-accent quoteAsset">查股價</button>
+              </div>
+              <div class="quote-meta ${a.quoteError?'bad':(a.quoteAt?'ok':'')}" data-quote-meta>
+                ${a.quoteError?escapeHtml(a.quoteError):(a.quoteAt?`行情：${escapeHtml(a.quoteAt)}${a.quoteSource?` ・ ${escapeHtml(a.quoteSource)}`:''}`:'輸入代碼後會自動查詢')}
+              </div>
+            </div>
+            <div><label>股票名稱</label><input data-k="name" value="${escapeAttr(a.name||'')}" placeholder="元大台灣50"></div>
+            <div><label>股價（元）</label><input data-k="price" type="number" min="0" step="0.01" inputmode="decimal" value="${n(a.price)}"></div>
+            <div><label>張數</label><input data-k="lots" type="number" min="0" step="1" inputmode="numeric" value="${n(a.lots)}"></div>
+          </div>
+          <div class="kpi-list">
+            <div class="mini"><span>股數</span><b>${num(shares,0)}</b></div>
+            <div class="mini"><span>目前市值</span><b>${money(value)}</b></div>
+          </div>
+        </div>`;
+      box.appendChild(el);
+    });
+    if(!state.assets.length) box.innerHTML='<div class="notice">尚未加入質押標的。按右上方「＋加入質押標的」。</div>';
+
+    box.querySelectorAll('.asset').forEach(el=>{
+      const id=el.dataset.id, asset=state.assets.find(x=>x.id===id);
+      el.querySelector('.toggleAsset')?.addEventListener('click',()=>{asset.open=!asset.open;save();renderAll(false);});
+      el.querySelector('.deleteAsset')?.addEventListener('click',()=>{state.assets=state.assets.filter(x=>x.id!==id);save();renderAll(false);});
+      el.querySelector('.quoteAsset')?.addEventListener('click',()=>refreshAssetQuote(asset,el,false));
+      el.querySelectorAll('input[data-k]').forEach(inp=>{
+        inp.addEventListener('input',()=>{
+          const k=inp.dataset.k;
+          asset[k]=(k==='code'||k==='name')?inp.value:n(inp.value);
+          const shares=n(asset.lots)*1000, value=n(asset.price)*shares;
+          const title=el.querySelector('.asset-title');
+          const val=el.querySelector('.asset-value');
+          if(title) title.innerHTML=`<b>${escapeHtml(asset.name||'未命名標的')}</b><span>${escapeHtml(asset.code||'—')} ・ ${num(n(asset.lots),0)} 張</span>`;
+          if(val) val.innerHTML=`<b>${money(value)}</b><span>${num(shares,0)} 股</span>`;
+          const minis=el.querySelectorAll('.mini b');
+          if(minis[0]) minis[0].textContent=num(shares,0);
+          if(minis[1]) minis[1].textContent=money(value);
+          if(k==='code'){
+            asset.quoteError='';
+            asset.quoteAt='';
+            asset.quoteSource='';
+            clearTimeout(quoteTimers[asset.id]);
+            const candidate=quoteReadyCode(asset.code);
+            if(candidate){
+              const meta=el.querySelector('[data-quote-meta]');
+              if(meta){meta.className='quote-meta warn';meta.textContent='停止輸入後自動查詢…';}
+              quoteTimers[asset.id]=setTimeout(()=>refreshAssetQuote(asset,el,true),900);
+            }
+          }
+          save(); renderAll(false, true);
+        });
+      });
+    });
+  }
+
+  function renderStressAssets(){
+    const box=$('stressAssets');box.innerHTML='';
+    state.assets.forEach(a=>{
+      const el=document.createElement('div');el.style.margin='8px 0';
+      el.innerHTML=`<div class="row">
+        <div><label>${escapeHtml((a.code||'—')+' '+(a.name||''))} 跌幅（%）</label><input type="number" data-id="${a.id}" min="-99.9" max="1000" step="1" inputmode="decimal" value="${n(a.stress)}"></div>
+        <div><label>壓力後價格</label><input readonly value="${num(n(a.price)*(1+n(a.stress)/100),2)}"></div>
+      </div>`;
+      box.appendChild(el);
+    });
+    box.querySelectorAll('input[data-id]').forEach(inp=>{
+      inp.addEventListener('input',()=>{const a=state.assets.find(x=>x.id===inp.dataset.id);a.stress=n(inp.value);save();renderAll(false,true);});
+    });
+  }
+
+  function escapeHtml(s){return String(s).replace(/[&<>"']/g,m=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#039;'}[m]));}
+  function escapeAttr(s){return escapeHtml(s);}
+
+  function calc(){
+    const totalMarket=state.assets.reduce((s,a)=>s+n(a.price)*n(a.lots)*1000,0);
+    const loan=n(state.loanAmount);
+    const loanRatio=totalMarket>0?loan/totalMarket*100:NaN;
+    const maint=loan>0?totalMarket/loan*100:NaN;
+    const cap20=totalMarket*0.20, room=cap20-loan;
+    const interest=loan*n(state.annualRate)/100*n(state.months)/12;
+    const monthly=n(state.months)>0?interest/n(state.months):0;
+    const invest=n(state.investAmount);
+    const interestBE=invest>0?interest/invest*100:NaN;
+
+    const buyR=n(state.buyFeeRate)/100, sellR=n(state.sellFeeRate)/100, taxR=n(state.taxRate)/100;
+    const buyPrice=n(state.buyPrice);
+    let sellPrice=n(state.sellPrice);
+    let expRet=n(state.expectedReturn);
+    if((state.investmentMode||'sell')==='return'){
+      sellPrice=buyPrice*(1+expRet/100);
+    }else{
+      expRet=buyPrice>0?(sellPrice/buyPrice-1)*100:NaN;
+    }
+    const buyFee=invest*buyR;
+    const sharesEq=buyPrice>0?invest/buyPrice:0;
+    const sellValue=sharesEq*sellPrice;
+    const sellFee=sellValue*sellR;
+    const tax=sellValue*taxR;
+    const pricePL=sellValue-invest;
+    const netPL=pricePL+n(state.dividend)-interest-buyFee-sellFee-tax;
+    const netReturn=invest>0?netPL/invest*100:NaN;
+
+    const denomNoDiv=sharesEq*(1-sellR-taxR);
+    const beNoDiv=(denomNoDiv>0)?(invest+interest+buyFee)/denomNoDiv:NaN;
+    const costBE=(buyPrice>0&&Number.isFinite(beNoDiv))?(beNoDiv/buyPrice-1)*100:NaN;
+    const beFull=(denomNoDiv>0)?(invest+interest+buyFee-n(state.dividend))/denomNoDiv:NaN;
+
+    const stressMarket=state.assets.reduce((s,a)=>s+n(a.price)*n(a.lots)*1000*(1+n(a.stress)/100),0);
+    const stressMaint=loan>0?stressMarket/loan*100:NaN;
+    const dropTo=t=>{
+      if(totalMarket<=0||loan<=0) return NaN;
+      return (1-(loan*t/100)/totalMarket)*100;
+    };
+    const targetSingle=t=>{
+      if(state.assets.length!==1||loan<=0) return NaN;
+      const sh=n(state.assets[0].lots)*1000;
+      return sh>0?loan*(t/100)/sh:NaN;
+    };
+    const maturity=addMonths(state.borrowDate,n(state.months));
+    const now=new Date(); now.setHours(0,0,0,0);
+    const daysLeft=maturity?daysBetween(now,maturity):NaN;
+    return {totalMarket,loan,loanRatio,maint,cap20,room,interest,monthly,interestBE,buyR,sellR,taxR,buyPrice,sellPrice,expRet,buyFee,sellFee,tax,pricePL,netPL,netReturn,costBE,beFull,stressMarket,stressMaint,drop166:dropTo(166),drop130:dropTo(130),target166:targetSingle(166),target130:targetSingle(130),maturity,daysLeft};
+  }
+
+  function setClass(el,cls){el.classList.remove('status-good','status-warn','status-bad'); if(cls)el.classList.add(cls);}
+  function renderComputed(){
+    const c=calc();
+    $('mMarket').textContent=money(c.totalMarket);
+    $('mAssets').textContent=`${state.assets.length} 檔標的`;
+    $('mLoan').textContent=money(c.loan);
+    $('mLoanRatio').textContent=`借款比例 ${pct(c.loanRatio)}`;
+    $('mMaint').textContent=pct(c.maint);
+    $('m20Cap').textContent=money(c.cap20);
+    $('m20Room').textContent=c.room>=0?money(c.room):money(Math.abs(c.room));
+    $('m20RoomHint').textContent=c.room>=0?'仍可借（依20%法則）':'已超過20%上限';
+    $('mBrokerCap').textContent=n(state.brokerCap)>0?money(n(state.brokerCap)):'未填';
+
+    const ratioMetric=$('loanRatioMetric');
+    if(!state.riskMode) setClass(ratioMetric,null);
+    else if(c.loanRatio>20) setClass(ratioMetric,'status-bad');
+    else if(c.loanRatio>=18) setClass(ratioMetric,'status-warn');
+    else setClass(ratioMetric,'status-good');
+
+    const rn=$('riskNotice');
+    if(!state.riskMode){rn.className='notice';rn.textContent=`20%風控模式已關閉。個人20%上限仍為 ${money(c.cap20)}，目前只做資訊顯示。`;}
+    else if(c.loanRatio>20){rn.className='notice bad';rn.textContent=`⚠️ 已超過你的20%風控上限 ${money(Math.abs(c.room))}。目前借款比例 ${pct(c.loanRatio)}；仍可繼續試算。`;}
+    else if(c.loanRatio>=18){rn.className='notice warn';rn.textContent=`接近20%上限：目前 ${pct(c.loanRatio)}，距上限還有 ${money(c.room)}。`;}
+    else{rn.className='notice';rn.textContent=`20%風控範圍內：目前 ${pct(c.loanRatio)}，距上限還有 ${money(c.room)}。`;}
+
+    const alloc=n(state.investAmount)+n(state.cashReserve), diff=alloc-c.loan;
+    const an=$('allocationNotice');
+    if(Math.abs(diff)<1){an.className='notice';an.textContent=`✓ 投資金額＋保留現金 = ${money(alloc)}，與總借款一致。`;}
+    else {an.className='notice warn';an.textContent=`目前分配 ${money(alloc)}，與借款 ${money(c.loan)} 相差 ${money(Math.abs(diff))}（${diff>0?'超出':'尚未分配'}）。`;}
+
+    $('totalInterest').textContent=money(c.interest);
+    $('monthlyInterest').textContent=money(c.monthly);
+    $('interestBE').textContent=pct(c.interestBE);
+    $('costBE').textContent=pct(c.costBE);
+
+    $('maturityDate').textContent=fmtDate(c.maturity);
+    $('daysLeft').textContent=Number.isFinite(c.daysLeft)?(c.daysLeft>=0?`${c.daysLeft} 天`:`已逾期 ${Math.abs(c.daysLeft)} 天`):'—';
+    $('maturityInterest').textContent=money(c.interest);
+    $('repayTotal').textContent=money(c.loan+c.interest);
+    $('renewInterest').textContent=money(c.interest);
+    $('renewPrincipal').textContent=money(c.loan);
+
+    $('sellPriceWrap').style.display=(state.investmentMode==='sell')?'block':'none';
+    $('expectedReturnWrap').style.display=(state.investmentMode==='return')?'block':'none';
+    if(state.investmentMode==='sell'){
+      state.expectedReturn=Number.isFinite(c.expRet)?c.expRet:0;
+      $('expectedReturn').value=Number.isFinite(c.expRet)?c.expRet.toFixed(4):'';
+    } else {
+      state.sellPrice=Number.isFinite(c.sellPrice)?c.sellPrice:0;
+      $('sellPrice').value=Number.isFinite(c.sellPrice)?c.sellPrice.toFixed(2):'';
+    }
+
+    $('pricePL').textContent=money(c.pricePL);
+    $('dividendPL').textContent=money(n(state.dividend));
+    $('interestPL').textContent='− '+money(c.interest);
+    $('feesPL').textContent='− '+money(c.buyFee+c.sellFee);
+    $('taxPL').textContent='− '+money(c.tax);
+    $('netPL').textContent=money(c.netPL);
+    $('netPL').className=c.netPL>0?'goodtxt':c.netPL<0?'badtxt':'';
+    $('netReturn').textContent=pct(c.netReturn);
+    $('netReturn').className=c.netReturn>0?'goodtxt':c.netReturn<0?'badtxt':'';
+    $('breakEvenPrice').textContent=Number.isFinite(c.beFull)?`${num(c.beFull,2)} 元`:'—';
+    $('investmentNote').textContent=`以「實際拿去買股票 ${money(n(state.investAmount))}」作為投資本金，等比例試算價格報酬；未模擬實際整股／零股成交限制與滑價。`;
+
+    $('stressMarket').textContent=money(c.stressMarket);
+    $('stressMaint').textContent=pct(c.stressMaint);
+    $('stressMaint').className=c.stressMaint<130?'badtxt':c.stressMaint<166?'warntxt':'goodtxt';
+    const d166=c.stressMaint-166, d130=c.stressMaint-130;
+    $('dist166').textContent=Number.isFinite(d166)?`${d166>=0?'+':''}${num(d166,2)} 個百分點`:'—';
+    $('dist166').className=d166<0?'badtxt':d166<20?'warntxt':'goodtxt';
+    $('dist130').textContent=Number.isFinite(d130)?`${d130>=0?'+':''}${num(d130,2)} 個百分點`:'—';
+    $('dist130').className=d130<0?'badtxt':d130<20?'warntxt':'goodtxt';
+    $('drop166').textContent=Number.isFinite(c.drop166)?(c.drop166>=0?`約 -${num(c.drop166,2)}%`:`目前已低於`):'—';
+    $('drop130').textContent=Number.isFinite(c.drop130)?(c.drop130>=0?`約 -${num(c.drop130,2)}%`:`目前已低於`):'—';
+
+    if(state.assets.length===1){
+      $('label166').textContent='166% 對應股價';
+      $('label130').textContent='130% 對應股價';
+      $('target166').textContent=Number.isFinite(c.target166)?`${num(c.target166,2)} 元`:'—';
+      $('target130').textContent=Number.isFinite(c.target130)?`${num(c.target130,2)} 元`:'—';
+    }else{
+      $('label166').textContent='166% 對應整體跌幅';
+      $('label130').textContent='130% 對應整體跌幅';
+      $('target166').textContent=Number.isFinite(c.drop166)?(c.drop166>=0?`約 -${num(c.drop166,2)}%`:'目前已低於'):'—';
+      $('target130').textContent=Number.isFinite(c.drop130)?(c.drop130>=0?`約 -${num(c.drop130,2)}%`:'目前已低於'):'—';
+    }
+  }
+
+  function renderAll(doSync=true, skipAssetRender=false){
+    if(doSync) syncFields();
+    if(!skipAssetRender) renderAssets();
+    renderStressAssets();
+    renderComputed();
+  }
+
+  const bindNum=(id,key)=>$(id).addEventListener('input',e=>{state[key]=n(e.target.value);save();renderComputed();renderStressAssets();});
+  bindNum('loanAmount','loanAmount'); bindNum('annualRate','annualRate'); bindNum('months','months');
+  bindNum('investAmount','investAmount'); bindNum('cashReserve','cashReserve'); bindNum('dividend','dividend');
+  bindNum('buyFeeRate','buyFeeRate'); bindNum('sellFeeRate','sellFeeRate'); bindNum('taxRate','taxRate');
+  bindNum('buyPrice','buyPrice');
+  $('brokerCap').addEventListener('input',e=>{state.brokerCap=e.target.value===''?'':n(e.target.value);save();renderComputed();});
+  $('borrowDate').addEventListener('input',e=>{state.borrowDate=e.target.value;save();renderComputed();});
+  $('riskToggle').addEventListener('change',e=>{state.riskMode=e.target.checked;save();renderComputed();});
+  $('investmentMode').addEventListener('change',e=>{state.investmentMode=e.target.value;save();renderComputed();});
+  $('sellPrice').addEventListener('input',e=>{state.sellPrice=n(e.target.value);save();renderComputed();});
+  $('expectedReturn').addEventListener('input',e=>{state.expectedReturn=n(e.target.value);save();renderComputed();});
+
+
+  $('updateAllQuotesBtn').addEventListener('click',async()=>{
+    const btn=$('updateAllQuotesBtn');
+    const candidates=state.assets.filter(a=>quoteReadyCode(a.code));
+    if(!candidates.length){toast('目前沒有可查詢的股票代碼');return;}
+    btn.textContent='更新中…';btn.disabled=true;
+    let ok=0, fail=0;
+    const results=await Promise.allSettled(candidates.map(async a=>{
+      try{
+        const q=await getQuote(a.code);
+        a.code=q.code || a.code;
+        if(q.name) a.name=q.name;
+        if(Number.isFinite(Number(q.price))) a.price=Number(q.price);
+        a.quoteAt=q.displayTime || q.time || q.date || '剛剛更新';
+        a.quoteSource=q.sourceLabel || q.source || '行情來源';
+        a.quoteError='';
+        ok++;
+      }catch(e){
+        a.quoteError=e?.message || '行情查詢失敗';
+        fail++;
+      }
+    }));
+    save();renderAll(false);
+    btn.textContent='↻ 更新全部股價';btn.disabled=false;
+    toast(`更新完成：${ok} 成功${fail?`、${fail} 失敗`:''}`);
+  });
+
+  $('addAssetBtn').addEventListener('click',()=>{
+    state.assets.push({id:uid(),code:'',name:'新質押標的',price:0,lots:1,stress:-30,open:true,quoteAt:'',quoteSource:'',quoteError:''});
+    save();renderAll(false);setTimeout(()=>document.querySelector('.asset:last-child')?.scrollIntoView({behavior:'smooth',block:'center'}),50);
+  });
+  $('strict20Btn').addEventListener('click',()=>{
+    const market=state.assets.reduce((s,a)=>s+n(a.price)*n(a.lots)*1000,0);
+    state.loanAmount=Math.floor(market*0.20);
+    $('loanAmount').value=state.loanAmount; save();renderComputed();renderStressAssets();toast(`借款已調整為 ${money(state.loanAmount)}`);
+  });
+  let resetArmedUntil = 0;
+  function handleReset(btn){
+    const now = Date.now();
+    const buttons = [$('resetBtn'), $('resetBtnBottom')].filter(Boolean);
+    if(now > resetArmedUntil){
+      resetArmedUntil = now + 4000;
+      buttons.forEach(b=>b.textContent='再按一次確認');
+      toast('4 秒內再按一次即可恢復預設值');
+      setTimeout(()=>{
+        if(Date.now() > resetArmedUntil){
+          buttons.forEach(b=>b.textContent='恢復預設值');
+        }
+      }, 4100);
+      return;
+    }
+    resetArmedUntil = 0;
+    state=defaultState();
+    save();
+    renderAll(true);
+    buttons.forEach(b=>b.textContent='恢復預設值');
+    window.scrollTo({top:0,behavior:'smooth'});
+    toast('已恢復預設值');
+  }
+  $('resetBtn').addEventListener('click',()=>handleReset($('resetBtn')));
+  $('resetBtnBottom')?.addEventListener('click',()=>handleReset($('resetBtnBottom')));
+  $('stressButtons').querySelectorAll('button').forEach(btn=>btn.addEventListener('click',()=>{
+    const v=n(btn.dataset.stress);state.assets.forEach(a=>a.stress=v);save();renderAll(false);toast(`全部標的套用 ${v}%`);
+  }));
+
+  renderAll(true);
+
+  if('serviceWorker' in navigator && (location.protocol==='https:' || location.hostname==='localhost')){
+    window.addEventListener('load',()=>{
+      navigator.serviceWorker.register('./sw.js').catch(()=>{});
+    });
+  }
+
+})();
+</script>
+</body>
+</html>
